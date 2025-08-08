@@ -80,3 +80,8 @@ Thumbs.db
 
 # Demo accounts file (contains sensitive test credentials)
 DEMO_ACCOUNTS.md
+
+# Deployment files - keep these for deployment configuration
+# vercel.json
+# netlify.toml
+# .github/
