@@ -32,9 +32,9 @@ A comprehensive React-based Student Management System built with TypeScript, Tai
 
 | Role | Email | Password | Access Level |
 |------|-------|----------|-------------|
-| **Admin** | `admin@school.edu` | `admin123` | Full system access |
-| **Instructor** | `instructor@school.edu` | `instructor123` | Course & grade management |
-| **Student** | `emma.rodriguez@student.edu` | `student123` | Personal dashboard & courses |
+| **Admin** | `admin@school.edu` | `admin123` | Full system access "Still in development phase, will not work now" |
+| **Instructor** | `instructor@school.edu` | `instructor123` | Course & grade management "Still in development phase, will not work now"|
+| **Student** | `emma.rodriguez@student.edu` | `student123` | Personal dashboard & courses "This will work"|
 
 ## 🛠️ Technology Stack
 
