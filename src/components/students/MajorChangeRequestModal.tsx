@@ -54,7 +54,7 @@ const MajorChangeRequestModal: React.FC<MajorChangeRequestModalProps> = ({ isOpe
       // Simulate API call delay
       await new Promise(resolve => setTimeout(resolve, 1000));
 
-      submitMajorChangeRequest({
+      await submitMajorChangeRequest({
         studentId: user.id,
         currentMajorId: currentMajor!.id,
         requestedMajorId: selectedMajorId,

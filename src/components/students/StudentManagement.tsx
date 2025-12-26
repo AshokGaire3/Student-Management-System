@@ -40,9 +40,13 @@ const StudentManagement: React.FC = () => {
     setIsModalOpen(true);
   };
 
-  const handleDeleteStudent = (studentId: string) => {
+  const handleDeleteStudent = async (studentId: string) => {
     if (window.confirm('Are you sure you want to delete this student?')) {
-      deleteStudent(studentId);
+      try {
+        await deleteStudent(studentId);
+      } catch (error) {
+        // Error handling is done in the context
+      }
     }
   };
 

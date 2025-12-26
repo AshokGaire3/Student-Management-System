@@ -22,7 +22,7 @@ const MajorChangeRequestManagement: React.FC = () => {
 
   const handleReviewRequest = async (requestId: string, status: 'approved' | 'denied') => {
     try {
-      reviewMajorChangeRequest(requestId, status, reviewComment.trim() || undefined);
+      await reviewMajorChangeRequest(requestId, status, reviewComment.trim() || undefined);
       setSelectedRequest(null);
       setReviewComment('');
     } catch (error) {

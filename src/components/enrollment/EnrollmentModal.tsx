@@ -19,7 +19,7 @@ const EnrollmentModal: React.FC<EnrollmentModalProps> = ({ isOpen, onClose }) =>
 
   const [warnings, setWarnings] = useState<string[]>([]);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     // Check for existing enrollment
@@ -32,9 +32,13 @@ const EnrollmentModal: React.FC<EnrollmentModalProps> = ({ isOpen, onClose }) =>
       return;
     }
 
-    enrollStudent(formData);
-    onClose();
-    resetForm();
+    try {
+      await enrollStudent(formData);
+      onClose();
+      resetForm();
+    } catch (error) {
+      // Error handling is done in the context
+    }
   };
 
   const resetForm = () => {

@@ -1,13 +1,11 @@
 import React, { useState } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
+import { useToast } from '../../services/toast';
 import { GraduationCap, Mail, Lock, Eye, EyeOff, AlertCircle } from 'lucide-react';
 
-interface LoginFormProps {
-  onLogin: (user: any) => void;
-}
-
-const LoginForm: React.FC<LoginFormProps> = ({ onLogin }) => {
+const LoginForm: React.FC = () => {
   const { login } = useAuth();
+  const { showToast } = useToast();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -20,19 +18,21 @@ const LoginForm: React.FC<LoginFormProps> = ({ onLogin }) => {
     setError('');
 
     try {
-      const user = await login(email, password);
-      onLogin(user);
-    } catch (err) {
-      setError('Invalid email or password');
+      await login(email, password);
+      showToast('Login successful!', 'success');
+    } catch (err: any) {
+      const errorMessage = err.message || 'Invalid email or password';
+      setError(errorMessage);
+      showToast(errorMessage, 'error');
     } finally {
       setIsLoading(false);
     }
   };
 
   const demoCredentials = [
-    { role: 'Administrator', email: 'admin@school.edu', password: 'admin123' },
-    { role: 'Instructor', email: 'instructor@school.edu', password: 'instructor123' },
-    { role: 'Student', email: 'student@school.edu', password: 'studentdemo123' }
+    { role: 'Administrator', email: 'admin@university.edu', password: 'admin123' },
+    { role: 'Instructor', email: 'jane.instructor@university.edu', password: 'instructor123' },
+    { role: 'Student', email: 'emma.rodriguez@student.edu', password: 'student123' }
   ];
 
   return (

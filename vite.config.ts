@@ -9,6 +9,14 @@ export default defineConfig(({ mode }) => {
   return {
     plugins: [react()],
     base: isProduction && isGitHubPages ? '/Student-Management-System/' : '/',
+    server: {
+      proxy: {
+        '/api': {
+          target: 'http://localhost:5000',
+          changeOrigin: true,
+        },
+      },
+    },
     build: {
       outDir: 'dist',
       assetsDir: 'assets',

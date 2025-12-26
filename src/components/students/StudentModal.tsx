@@ -55,16 +55,20 @@ const StudentModal: React.FC<StudentModalProps> = ({ isOpen, onClose, student, m
     }
   }, [student, mode, isOpen]);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (mode === 'create') {
-      addStudent(formData);
-    } else if (mode === 'edit' && student) {
-      updateStudent(student.id, formData);
+    try {
+      if (mode === 'create') {
+        await addStudent(formData);
+      } else if (mode === 'edit' && student) {
+        await updateStudent(student.id, formData);
+      }
+      onClose();
+    } catch (error) {
+      // Error handling is done in the context
+      // Modal stays open if there's an error
     }
-    
-    onClose();
   };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {

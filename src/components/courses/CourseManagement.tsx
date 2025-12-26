@@ -34,9 +34,13 @@ const CourseManagement: React.FC = () => {
     setIsModalOpen(true);
   };
 
-  const handleDeleteCourse = (courseId: string) => {
+  const handleDeleteCourse = async (courseId: string) => {
     if (window.confirm('Are you sure you want to delete this course?')) {
-      deleteCourse(courseId);
+      try {
+        await deleteCourse(courseId);
+      } catch (error) {
+        // Error handling is done in the context
+      }
     }
   };
 

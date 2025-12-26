@@ -1,4 +1,7 @@
-import React, { createContext, useContext, useState, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { useAuth } from './AuthContext';
+import { useToast } from '../services/toast';
+import * as api from '../services/api';
 
 export interface Student {
   id: string;
@@ -79,34 +82,35 @@ interface DataContextType {
   enrollments: Enrollment[];
   majors: Major[];
   majorChangeRequests: MajorChangeRequest[];
+  loading: boolean;
   
   // Student operations
-  addStudent: (student: Omit<Student, 'id'>) => void;
-  updateStudent: (id: string, student: Partial<Student>) => void;
-  deleteStudent: (id: string) => void;
+  addStudent: (student: Omit<Student, 'id'>) => Promise<void>;
+  updateStudent: (id: string, student: Partial<Student>) => Promise<void>;
+  deleteStudent: (id: string) => Promise<void>;
   
   // Course operations
-  addCourse: (course: Omit<Course, 'id'>) => void;
-  updateCourse: (id: string, course: Partial<Course>) => void;
-  deleteCourse: (id: string) => void;
+  addCourse: (course: Omit<Course, 'id'>) => Promise<void>;
+  updateCourse: (id: string, course: Partial<Course>) => Promise<void>;
+  deleteCourse: (id: string) => Promise<void>;
   
   // Grade operations
-  addGrade: (grade: Omit<Grade, 'id'>) => void;
-  updateGrade: (id: string, grade: Partial<Grade>) => void;
+  addGrade: (grade: Omit<Grade, 'id'>) => Promise<void>;
+  updateGrade: (id: string, grade: Partial<Grade>) => Promise<void>;
   
   // Enrollment operations
-  enrollStudent: (enrollment: Omit<Enrollment, 'id'>) => void;
-  addEnrollment: (enrollment: Enrollment) => void;
+  enrollStudent: (enrollment: Omit<Enrollment, 'id'>) => Promise<void>;
+  addEnrollment: (enrollment: Enrollment) => Promise<void>;
   getStudentEnrollments: (studentId: string) => Enrollment[];
   
   // Major operations
-  addMajor: (major: Omit<Major, 'id'>) => void;
-  updateMajor: (id: string, major: Partial<Major>) => void;
-  deleteMajor: (id: string) => void;
+  addMajor: (major: Omit<Major, 'id'>) => Promise<void>;
+  updateMajor: (id: string, major: Partial<Major>) => Promise<void>;
+  deleteMajor: (id: string) => Promise<void>;
   
   // Major change request operations
-  submitMajorChangeRequest: (request: Omit<MajorChangeRequest, 'id'>) => void;
-  reviewMajorChangeRequest: (id: string, status: 'approved' | 'denied', adminComments?: string) => void;
+  submitMajorChangeRequest: (request: Omit<MajorChangeRequest, 'id'>) => Promise<void>;
+  reviewMajorChangeRequest: (id: string, status: 'approved' | 'denied', adminComments?: string) => Promise<void>;
   
   // Utility functions
   getStudentGrades: (studentId: string) => Grade[];
@@ -115,6 +119,9 @@ interface DataContextType {
   getMajorCourses: (majorId: string) => Course[];
   getStudentMajor: (studentId: string) => Major | undefined;
   calculateGPA: (studentId: string) => number;
+  
+  // Refresh data
+  refreshData: () => Promise<void>;
 }
 
 const DataContext = createContext<DataContextType | undefined>(undefined);
@@ -127,268 +134,236 @@ export const useData = () => {
   return context;
 };
 
-// Mock majors data
-const mockMajors: Major[] = [
-  {
-    id: '1',
-    majorName: 'Computer Science',
-    majorCode: 'CS',
-    description: 'Study of algorithmic processes and computational systems',
-    requiredCredits: 120,
-    degreeType: 'Bachelor'
-  },
-  {
-    id: '2',
-    majorName: 'Mathematics',
-    majorCode: 'MATH',
-    description: 'Study of numbers, quantity, structure, space, and change',
-    requiredCredits: 120,
-    degreeType: 'Bachelor'
-  },
-  {
-    id: '3',
-    majorName: 'English Literature',
-    majorCode: 'ENG',
-    description: 'Study of written works, especially those considered of superior or lasting artistic merit',
-    requiredCredits: 120,
-    degreeType: 'Bachelor'
-  },
-  {
-    id: '4',
-    majorName: 'Business Administration',
-    majorCode: 'BUS',
-    description: 'Study of business management, economics, and organizational behavior',
-    requiredCredits: 120,
-    degreeType: 'Bachelor'
-  }
-];
-
-// Mock data
-const mockStudents: Student[] = [
-  {
-    id: '1',
-    firstName: 'Emma',
-    lastName: 'Rodriguez',
-    email: 'emma.rodriguez@student.edu',
-    dateOfBirth: '2002-05-15',
-    enrollmentDate: '2023-08-15',
-    status: 'active',
-    phone: '+1 (555) 123-4567',
-    address: '123 College Ave, University City, UC 12345',
-    gpa: 3.85,
-    majorId: '1', // Computer Science
-    avatar: 'https://images.pexels.com/photos/1239291/pexels-photo-1239291.jpeg?auto=compress&cs=tinysrgb&w=150'
-  },
-  {
-    id: '2',
-    firstName: 'James',
-    lastName: 'Wilson',
-    email: 'james.wilson@student.edu',
-    dateOfBirth: '2001-11-22',
-    enrollmentDate: '2023-08-15',
-    status: 'active',
-    phone: '+1 (555) 234-5678',
-    address: '456 University Blvd, Campus Town, CT 67890',
-    gpa: 3.92,
-    majorId: '2', // Mathematics
-    avatar: 'https://images.pexels.com/photos/1222271/pexels-photo-1222271.jpeg?auto=compress&cs=tinysrgb&w=150'
-  },
-  {
-    id: '3',
-    firstName: 'Sophia',
-    lastName: 'Chen',
-    email: 'sophia.chen@student.edu',
-    dateOfBirth: '2003-03-08',
-    enrollmentDate: '2023-08-15',
-    status: 'active',
-    phone: '+1 (555) 345-6789',
-    address: '789 Academic Way, Scholar Hill, SH 13579',
-    gpa: 3.67,
-    majorId: '3', // English Literature
-    avatar: 'https://images.pexels.com/photos/774909/pexels-photo-774909.jpeg?auto=compress&cs=tinysrgb&w=150'
-  }
-];
-
-const mockCourses: Course[] = [
-  {
-    id: '1',
-    courseName: 'Introduction to Computer Science',
-    courseCode: 'CS101',
-    instructorId: '2',
-    instructorName: 'Prof. Michael Chen',
-    credits: 3,
-    semester: 'Fall',
-    year: 2024,
-    enrolledStudents: 28,
-    maxStudents: 30,
-    majorId: '1', // Computer Science
-    description: 'Fundamental concepts of computer science including programming, algorithms, and data structures.',
-    prerequisites: []
-  },
-  {
-    id: '2',
-    courseName: 'Calculus I',
-    courseCode: 'MATH101',
-    instructorId: '3',
-    instructorName: 'Dr. Lisa Park',
-    credits: 4,
-    semester: 'Fall',
-    year: 2024,
-    enrolledStudents: 25,
-    maxStudents: 35,
-    majorId: '2', // Mathematics
-    description: 'Introduction to differential and integral calculus with applications.',
-    prerequisites: []
-  },
-  {
-    id: '3',
-    courseName: 'English Composition',
-    courseCode: 'ENG101',
-    instructorId: '4',
-    instructorName: 'Prof. David Kim',
-    credits: 3,
-    semester: 'Fall',
-    year: 2024,
-    enrolledStudents: 22,
-    maxStudents: 25,
-    majorId: '3', // English Literature
-    description: 'Fundamentals of academic writing, critical thinking, and literary analysis.',
-    prerequisites: []
-  }
-];
-
-const mockGrades: Grade[] = [
-  {
-    id: '1',
-    studentId: '1',
-    courseId: '1',
-    grade: 'A-',
-    points: 3.7,
-    dateAssigned: '2024-01-15',
-    assignment: 'Final Project'
-  },
-  {
-    id: '2',
-    studentId: '1',
-    courseId: '2',
-    grade: 'B+',
-    points: 3.3,
-    dateAssigned: '2024-01-12',
-    assignment: 'Midterm Exam'
-  },
-  {
-    id: '3',
-    studentId: '2',
-    courseId: '1',
-    grade: 'A',
-    points: 4.0,
-    dateAssigned: '2024-01-15',
-    assignment: 'Final Project'
-  }
-];
-
-const mockEnrollments: Enrollment[] = [
-  {
-    id: '1',
-    studentId: '1',
-    courseId: '1',
-    enrollmentDate: '2023-08-15',
-    status: 'enrolled'
-  },
-  {
-    id: '2',
-    studentId: '1',
-    courseId: '2',
-    enrollmentDate: '2023-08-15',
-    status: 'enrolled'
-  },
-  {
-    id: '3',
-    studentId: '2',
-    courseId: '1',
-    enrollmentDate: '2023-08-15',
-    status: 'enrolled'
-  }
-];
-
-const mockMajorChangeRequests: MajorChangeRequest[] = [
-  {
-    id: '1',
-    studentId: '1',
-    currentMajorId: '1', // Computer Science
-    requestedMajorId: '4', // Business Administration
-    status: 'pending',
-    requestDate: '2024-01-10',
-    reason: 'I have developed a strong interest in business strategy and entrepreneurship through elective courses.'
-  },
-  {
-    id: '2',
-    studentId: '2',
-    currentMajorId: '2', // Mathematics
-    requestedMajorId: '1', // Computer Science
-    status: 'approved',
-    requestDate: '2023-12-15',
-    reviewDate: '2024-01-05',
-    reviewedBy: 'admin',
-    reason: 'I want to apply my mathematical background to software development and algorithms.',
-    adminComments: 'Approved due to strong mathematical foundation and relevant coursework.'
-  }
-];
-
 export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  const [students, setStudents] = useState<Student[]>(mockStudents);
-  const [courses, setCourses] = useState<Course[]>(mockCourses);
-  const [grades, setGrades] = useState<Grade[]>(mockGrades);
-  const [enrollments, setEnrollments] = useState<Enrollment[]>(mockEnrollments);
-  const [majors, setMajors] = useState<Major[]>(mockMajors);
-  const [majorChangeRequests, setMajorChangeRequests] = useState<MajorChangeRequest[]>(mockMajorChangeRequests);
+  const { user, isAuthenticated } = useAuth();
+  const { showToast } = useToast();
+  const [students, setStudents] = useState<Student[]>([]);
+  const [courses, setCourses] = useState<Course[]>([]);
+  const [grades, setGrades] = useState<Grade[]>([]);
+  const [enrollments, setEnrollments] = useState<Enrollment[]>([]);
+  const [majors, setMajors] = useState<Major[]>([]);
+  const [majorChangeRequests, setMajorChangeRequests] = useState<MajorChangeRequest[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const addStudent = (student: Omit<Student, 'id'>) => {
-    const newStudent = { ...student, id: Date.now().toString() };
-    setStudents(prev => [...prev, newStudent]);
+  const loadData = async () => {
+    if (!isAuthenticated) {
+      setLoading(false);
+      return;
+    }
+
+    try {
+      setLoading(true);
+      const [studentsData, coursesData, gradesData, enrollmentsData, majorsData, requestsData] = await Promise.all([
+        api.studentsAPI.getAll().catch(() => []),
+        api.coursesAPI.getAll().catch(() => []),
+        api.gradesAPI.getAll().catch(() => []),
+        api.enrollmentsAPI.getAll().catch(() => []),
+        api.majorsAPI.getAll().catch(() => []),
+        api.majorChangeRequestsAPI.getAll().catch(() => [])
+      ]);
+
+      setStudents(studentsData);
+      setCourses(coursesData);
+      setGrades(gradesData);
+      setEnrollments(enrollmentsData);
+      setMajors(majorsData);
+      setMajorChangeRequests(requestsData);
+    } catch (error: any) {
+      console.error('Error loading data:', error);
+      showToast('Failed to load data', 'error');
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const updateStudent = (id: string, updatedStudent: Partial<Student>) => {
-    setStudents(prev => prev.map(student => 
-      student.id === id ? { ...student, ...updatedStudent } : student
-    ));
+  useEffect(() => {
+    loadData();
+  }, [isAuthenticated]);
+
+  const refreshData = async () => {
+    await loadData();
   };
 
-  const deleteStudent = (id: string) => {
-    setStudents(prev => prev.filter(student => student.id !== id));
+  // Student operations
+  const addStudent = async (student: Omit<Student, 'id'>) => {
+    try {
+      const newStudent = await api.studentsAPI.create(student);
+      setStudents(prev => [...prev, newStudent]);
+      showToast('Student added successfully', 'success');
+    } catch (error: any) {
+      showToast(error.message || 'Failed to add student', 'error');
+      throw error;
+    }
   };
 
-  const addCourse = (course: Omit<Course, 'id'>) => {
-    const newCourse = { ...course, id: Date.now().toString() };
-    setCourses(prev => [...prev, newCourse]);
+  const updateStudent = async (id: string, updatedStudent: Partial<Student>) => {
+    try {
+      const updated = await api.studentsAPI.update(id, updatedStudent);
+      setStudents(prev => prev.map(s => s.id === id ? updated : s));
+      showToast('Student updated successfully', 'success');
+    } catch (error: any) {
+      showToast(error.message || 'Failed to update student', 'error');
+      throw error;
+    }
   };
 
-  const updateCourse = (id: string, updatedCourse: Partial<Course>) => {
-    setCourses(prev => prev.map(course => 
-      course.id === id ? { ...course, ...updatedCourse } : course
-    ));
+  const deleteStudent = async (id: string) => {
+    try {
+      await api.studentsAPI.delete(id);
+      setStudents(prev => prev.filter(s => s.id !== id));
+      showToast('Student deleted successfully', 'success');
+    } catch (error: any) {
+      showToast(error.message || 'Failed to delete student', 'error');
+      throw error;
+    }
   };
 
-  const deleteCourse = (id: string) => {
-    setCourses(prev => prev.filter(course => course.id !== id));
+  // Course operations
+  const addCourse = async (course: Omit<Course, 'id'>) => {
+    try {
+      const newCourse = await api.coursesAPI.create(course);
+      setCourses(prev => [...prev, newCourse]);
+      showToast('Course added successfully', 'success');
+    } catch (error: any) {
+      showToast(error.message || 'Failed to add course', 'error');
+      throw error;
+    }
   };
 
-  const addGrade = (grade: Omit<Grade, 'id'>) => {
-    const newGrade = { ...grade, id: Date.now().toString() };
-    setGrades(prev => [...prev, newGrade]);
+  const updateCourse = async (id: string, updatedCourse: Partial<Course>) => {
+    try {
+      const updated = await api.coursesAPI.update(id, updatedCourse);
+      setCourses(prev => prev.map(c => c.id === id ? updated : c));
+      showToast('Course updated successfully', 'success');
+    } catch (error: any) {
+      showToast(error.message || 'Failed to update course', 'error');
+      throw error;
+    }
   };
 
-  const updateGrade = (id: string, updatedGrade: Partial<Grade>) => {
-    setGrades(prev => prev.map(grade => 
-      grade.id === id ? { ...grade, ...updatedGrade } : grade
-    ));
+  const deleteCourse = async (id: string) => {
+    try {
+      await api.coursesAPI.delete(id);
+      setCourses(prev => prev.filter(c => c.id !== id));
+      showToast('Course deleted successfully', 'success');
+    } catch (error: any) {
+      showToast(error.message || 'Failed to delete course', 'error');
+      throw error;
+    }
   };
 
-  const enrollStudent = (enrollment: Omit<Enrollment, 'id'>) => {
-    const newEnrollment = { ...enrollment, id: Date.now().toString() };
-    setEnrollments(prev => [...prev, newEnrollment]);
+  // Grade operations
+  const addGrade = async (grade: Omit<Grade, 'id'>) => {
+    try {
+      const newGrade = await api.gradesAPI.create(grade);
+      setGrades(prev => [...prev, newGrade]);
+      showToast('Grade added successfully', 'success');
+    } catch (error: any) {
+      showToast(error.message || 'Failed to add grade', 'error');
+      throw error;
+    }
   };
 
+  const updateGrade = async (id: string, updatedGrade: Partial<Grade>) => {
+    try {
+      const updated = await api.gradesAPI.update(id, updatedGrade);
+      setGrades(prev => prev.map(g => g.id === id ? updated : g));
+      showToast('Grade updated successfully', 'success');
+    } catch (error: any) {
+      showToast(error.message || 'Failed to update grade', 'error');
+      throw error;
+    }
+  };
+
+  // Enrollment operations
+  const enrollStudent = async (enrollment: Omit<Enrollment, 'id'>) => {
+    try {
+      const newEnrollment = await api.enrollmentsAPI.create(enrollment);
+      setEnrollments(prev => [...prev, newEnrollment]);
+      
+      // Refresh courses to update enrollment count
+      const updatedCourse = await api.coursesAPI.getById(enrollment.courseId);
+      setCourses(prev => prev.map(c => c.id === enrollment.courseId ? updatedCourse : c));
+      
+      showToast('Enrollment successful', 'success');
+    } catch (error: any) {
+      showToast(error.message || 'Failed to enroll student', 'error');
+      throw error;
+    }
+  };
+
+  const addEnrollment = async (enrollment: Enrollment) => {
+    setEnrollments(prev => [...prev, enrollment]);
+  };
+
+  const getStudentEnrollments = (studentId: string) => {
+    return enrollments.filter(enrollment => enrollment.studentId === studentId);
+  };
+
+  // Major operations
+  const addMajor = async (major: Omit<Major, 'id'>) => {
+    try {
+      const newMajor = await api.majorsAPI.create(major);
+      setMajors(prev => [...prev, newMajor]);
+      showToast('Major added successfully', 'success');
+    } catch (error: any) {
+      showToast(error.message || 'Failed to add major', 'error');
+      throw error;
+    }
+  };
+
+  const updateMajor = async (id: string, updatedMajor: Partial<Major>) => {
+    try {
+      const updated = await api.majorsAPI.update(id, updatedMajor);
+      setMajors(prev => prev.map(m => m.id === id ? updated : m));
+      showToast('Major updated successfully', 'success');
+    } catch (error: any) {
+      showToast(error.message || 'Failed to update major', 'error');
+      throw error;
+    }
+  };
+
+  const deleteMajor = async (id: string) => {
+    try {
+      await api.majorsAPI.delete(id);
+      setMajors(prev => prev.filter(m => m.id !== id));
+      showToast('Major deleted successfully', 'success');
+    } catch (error: any) {
+      showToast(error.message || 'Failed to delete major', 'error');
+      throw error;
+    }
+  };
+
+  // Major change request operations
+  const submitMajorChangeRequest = async (request: Omit<MajorChangeRequest, 'id'>) => {
+    try {
+      const newRequest = await api.majorChangeRequestsAPI.create(request);
+      setMajorChangeRequests(prev => [...prev, newRequest]);
+      showToast('Major change request submitted successfully', 'success');
+    } catch (error: any) {
+      showToast(error.message || 'Failed to submit request', 'error');
+      throw error;
+    }
+  };
+
+  const reviewMajorChangeRequest = async (id: string, status: 'approved' | 'denied', adminComments?: string) => {
+    try {
+      const updated = await api.majorChangeRequestsAPI.review(id, status, adminComments);
+      setMajorChangeRequests(prev => prev.map(r => r.id === id ? updated : r));
+      
+      // If approved, refresh students to get updated major
+      if (status === 'approved') {
+        await loadData();
+      }
+      
+      showToast(`Request ${status} successfully`, 'success');
+    } catch (error: any) {
+      showToast(error.message || 'Failed to review request', 'error');
+      throw error;
+    }
+  };
+
+  // Utility functions
   const getStudentGrades = (studentId: string) => {
     return grades.filter(grade => grade.studentId === studentId);
   };
@@ -407,49 +382,6 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     );
   };
 
-  // Major operations
-  const addMajor = (major: Omit<Major, 'id'>) => {
-    const newMajor = { ...major, id: Date.now().toString() };
-    setMajors(prev => [...prev, newMajor]);
-  };
-
-  const updateMajor = (id: string, updatedMajor: Partial<Major>) => {
-    setMajors(prev => prev.map(major => 
-      major.id === id ? { ...major, ...updatedMajor } : major
-    ));
-  };
-
-  const deleteMajor = (id: string) => {
-    setMajors(prev => prev.filter(major => major.id !== id));
-  };
-
-  // Major change request operations
-  const submitMajorChangeRequest = (request: Omit<MajorChangeRequest, 'id'>) => {
-    const newRequest = { ...request, id: Date.now().toString() };
-    setMajorChangeRequests(prev => [...prev, newRequest]);
-  };
-
-  const reviewMajorChangeRequest = (id: string, status: 'approved' | 'denied', adminComments?: string) => {
-    setMajorChangeRequests(prev => prev.map(request => 
-      request.id === id ? { 
-        ...request, 
-        status, 
-        reviewDate: new Date().toISOString().split('T')[0],
-        reviewedBy: 'admin',
-        adminComments 
-      } : request
-    ));
-    
-    // If approved, update student's major
-    if (status === 'approved') {
-      const request = majorChangeRequests.find(r => r.id === id);
-      if (request) {
-        updateStudent(request.studentId, { majorId: request.requestedMajorId });
-      }
-    }
-  };
-
-  // Utility functions
   const getMajorCourses = (majorId: string) => {
     return courses.filter(course => course.majorId === majorId);
   };
@@ -467,15 +399,6 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     return Math.round((totalPoints / studentGrades.length) * 100) / 100;
   };
 
-  // Additional enrollment functions
-  const addEnrollment = (enrollment: Enrollment) => {
-    setEnrollments(prev => [...prev, enrollment]);
-  };
-
-  const getStudentEnrollments = (studentId: string) => {
-    return enrollments.filter(enrollment => enrollment.studentId === studentId);
-  };
-
   const value: DataContextType = {
     students,
     courses,
@@ -483,6 +406,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     enrollments,
     majors,
     majorChangeRequests,
+    loading,
     
     // Student operations
     addStudent,
@@ -518,7 +442,10 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     getCourseStudents,
     getMajorCourses,
     getStudentMajor,
-    calculateGPA
+    calculateGPA,
+    
+    // Refresh data
+    refreshData
   };
 
   return (

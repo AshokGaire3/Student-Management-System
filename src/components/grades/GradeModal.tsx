@@ -58,16 +58,19 @@ const GradeModal: React.FC<GradeModalProps> = ({ isOpen, onClose, grade, mode })
     }
   }, [grade, mode, isOpen]);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (mode === 'create') {
-      addGrade(formData);
-    } else if (mode === 'edit' && grade) {
-      updateGrade(grade.id, formData);
+    try {
+      if (mode === 'create') {
+        await addGrade(formData);
+      } else if (mode === 'edit' && grade) {
+        await updateGrade(grade.id, formData);
+      }
+      onClose();
+    } catch (error) {
+      // Error handling is done in the context
     }
-    
-    onClose();
   };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {

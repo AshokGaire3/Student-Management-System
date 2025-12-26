@@ -52,16 +52,19 @@ const CourseModal: React.FC<CourseModalProps> = ({ isOpen, onClose, course, mode
     }
   }, [course, mode, isOpen]);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (mode === 'create') {
-      addCourse(formData);
-    } else if (mode === 'edit' && course) {
-      updateCourse(course.id, formData);
+    try {
+      if (mode === 'create') {
+        await addCourse(formData);
+      } else if (mode === 'edit' && course) {
+        await updateCourse(course.id, formData);
+      }
+      onClose();
+    } catch (error) {
+      // Error handling is done in the context
     }
-    
-    onClose();
   };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {

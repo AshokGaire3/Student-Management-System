@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useData } from '../../contexts/DataContext';
+import { authAPI } from '../../services/api';
 import { UserPlus, Mail, Lock, User, Phone, MapPin, Calendar, GraduationCap, Eye, EyeOff, AlertCircle, CheckCircle } from 'lucide-react';
 
 interface StudentRegistrationProps {
@@ -8,7 +9,7 @@ interface StudentRegistrationProps {
 }
 
 const StudentRegistration: React.FC<StudentRegistrationProps> = ({ onRegistrationComplete, onBackToLogin }) => {
-  const { addStudent, majors } = useData();
+  const { majors } = useData();
   
   const [formData, setFormData] = useState({
     firstName: '',
@@ -63,24 +64,18 @@ const StudentRegistration: React.FC<StudentRegistrationProps> = ({ onRegistratio
     setIsLoading(true);
 
     try {
-      // Simulate API call delay
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      
-      // Calculate initial GPA (0 for new students)
-      const newStudent = {
+      // Register the student using the auth API
+      await authAPI.register({
+        email: formData.email,
+        password: formData.password,
         firstName: formData.firstName,
         lastName: formData.lastName,
-        email: formData.email,
         dateOfBirth: formData.dateOfBirth,
-        enrollmentDate: new Date().toISOString().split('T')[0],
-        status: 'active' as const,
         phone: formData.phone,
         address: formData.address,
-        gpa: 0.0,
         majorId: formData.majorId
-      };
-
-      addStudent(newStudent);
+      });
+      
       setSuccess('Registration successful! You can now log in with your credentials.');
       
       // Clear form
